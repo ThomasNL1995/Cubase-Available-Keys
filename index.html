@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cubase - Available Key Combinations</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="main">
+      <h1>Cubase - Available Key Combinations</h1>
+      <div id="select-file">
+        <div>
+          <span>Select your Keycommands.xml file</span>
+          <input type="file" id="select-file-btn" name="fileSelect" accept=".xml" />
+        </div>
+        <div id="file-status"></div>
+      </div>
+      <div id="search-container">
+        <input type="text" name="search" id="search-input" />
+        <div id="select-container">
+          <label>Ctrl</label>
+          <input type="checkbox" name="Ctrl" id="ctrl-checkbox" />
+          <label>Shift</label>
+          <input type="checkbox" name="Shift" id="shift-checkbox" />
+          <label>Alt</label>
+          <input type="checkbox" name="Alt" id="alt-checkbox" />
+        </div>
+      </div>
+      <div id="tab-control">
+        <div id="tab1" class="tab-button active">Available Commands</div>
+        <div id="tab2" class="tab-button">Used Commands</div>
+      </div>
+      <div id="list-container">
+        <ul id="list-ul"></ul>
+      </div>
+      <div id="footer">
+        <div><span id="available-count-span">0</span> available key combinations</div>
+        <div><span id="used-count-span">0</span> used key combinations</div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>
