@@ -9,17 +9,29 @@ const shiftCheckbox = document.getElementById("shift-checkbox");
 const altCheckbox = document.getElementById("alt-checkbox");
 const tab1Btn = document.getElementById("tab1");
 const tab2Btn = document.getElementById("tab2");
+const tab3Btn = document.getElementById("tab3");
+const sortSelect = document.getElementById("sort-select");
 const listContainer = document.getElementById("list-container");
-const listUl = document.getElementById("list-ul");
+const listHeaderWrap = document.getElementById("list-header-wrap");
+const listBody = document.getElementById("list-body");
+const listHeaders = document.getElementsByClassName("list-header");
 
+const footerWrap = document.getElementById("footer");
 const availableKeysCountSpan = document.getElementById("available-count-span");
 const usedKeysCountSpan = document.getElementById("used-count-span");
+
+const macroButtonsWrap = document.getElementById("macro-buttons");
+const selectAllMacrosBtn = document.getElementById("macro-selectall-btn");
+const exportMacrosBtn = document.getElementById("export-macros-btn");
 //STATE
 
 const state = {
-  activeTab: 1,
+  activeTab: 0,
+  activeSort: sortSelect.value,
   availableKeys: [], // Full list of available keys
   usedKeys: [], // Full list of used keys
+  macros: [],
+  selectedMacros: [],
   filters: { ctrl: false, shift: false, alt: false },
   searchQuery: "",
   availKeysFiltered: [],
@@ -99,6 +111,29 @@ function parseXML(xmlContent) {
 
     // Get nodes for each category
     const categoryNodes = xmlDoc.evaluate("//list[@name='Categories']/item", xmlDoc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    const macroNodes = xmlDoc.evaluate("//list[@name='Macros']/item", xmlDoc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+    for (let i = 0; i < macroNodes.snapshotLength; i++) {
+      const macroNode = macroNodes.snapshotItem(i);
+      const serializer = new XMLSerializer();
+      const macroToString = serializer.serializeToString(macroNode);
+      const macroName = xmlDoc.evaluate("string[@name='Name']", macroNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+      const macroCommands = xmlDoc.evaluate(".//list[@name='Commands']/item", macroNode, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+      const macro = { name: macroName?.getAttribute("value"), commands: [], selected: false, id: i, xml: macroToString };
+
+      console.log(macroName);
+      for (let j = 0; j < macroCommands.snapshotLength; j++) {
+        const commandNode = macroCommands.snapshotItem(j);
+        const commandName = xmlDoc.evaluate(".//string[@name='Name']", commandNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.getAttribute("value");
+        const commandCategory = xmlDoc.evaluate(".//string[@name='Category']", commandNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.getAttribute("value");
+
+        macro.commands.push({ name: commandName, category: commandCategory });
+        console.log(commandName);
+        console.log(commandCategory);
+      }
+      state.macros.push(macro);
+    }
 
     // Parse key commands XML data
     for (let i = 0; i < categoryNodes.snapshotLength; i++) {
@@ -171,6 +206,38 @@ function parseXML(xmlContent) {
   }
 }
 
+function createXMLFromSelectedMacros() {
+  const result = state.macros.reduce((acc, macro) => {
+    if (!macro.selected) {
+      return acc;
+    }
+    return acc + macro.xml;
+  }, "<Macros>\n  ");
+  return result + "\n</Macros>";
+}
+
+// Function to trigger the download
+function downloadXML() {
+  // Create a Blob from the XML string
+  if (!state.macros.some((macro) => macro.selected)) {
+    return console.log("No Macros Selected");
+  }
+  const blob = new Blob([createXMLFromSelectedMacros()], { type: "application/xml" });
+
+  // Create a temporary anchor element
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "cubase-macros-export.xml"; // File name for the download
+
+  // Append the anchor to the body, trigger a click, and remove it
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Revoke the object URL to free up memory
+  URL.revokeObjectURL(link.href);
+}
+
 function applyFiltersAndSearch() {
   const { availableKeys, usedKeys, filters, searchQuery } = state;
 
@@ -204,30 +271,113 @@ function applyFiltersAndSearch() {
     });
   };
 
+  const sortMethod = (a, b) => {
+    let isAsc = state.activeSort.split("-")[1] === "asc";
+    if (state.activeSort.includes("amount")) {
+      return isAsc ? a.score - b.score : b.score - a.score;
+    }
+    const propertyToSort = state.activeSort.split("-")[0]; //remove the asc or desc part
+    return isAsc ? a[propertyToSort].localeCompare(b[propertyToSort]) : b[propertyToSort].localeCompare(a[propertyToSort]);
+  };
+
   // Apply search first to update scores
   const searchedAvailKeys = applySearch(availableKeys, searchQuery);
   const searchedUsedKeys = applySearch(usedKeys, searchQuery);
 
   // Filter the searched keys
-  state.availKeysFiltered = filterKeys(searchedAvailKeys).sort((a, b) => a.score - b.score);
-  state.usedKeysFiltered = filterKeys(searchedUsedKeys).sort((a, b) => a.score - b.score);
+  if (state.activeTab === 0) {
+    state.availKeysFiltered = filterKeys(searchedAvailKeys).sort(sortMethod);
+  } else if (state.activeTab === 1) {
+    state.usedKeysFiltered = filterKeys(searchedUsedKeys).sort(sortMethod);
+  }
 }
 
 function render() {
-  listUl.innerHTML = "";
+  listBody.innerHTML = "";
 
-  tab1Btn.classList.toggle("active", state.activeTab === 1);
-  tab2Btn.classList.toggle("active", state.activeTab === 2);
+  let i = state.activeTab; //use the activeTab as index
 
-  const activeList = state.activeTab === 1 ? state.availKeysFiltered : state.usedKeysFiltered;
+  tab1Btn.classList.toggle("active", i === 0);
+  tab2Btn.classList.toggle("active", i === 1);
+  tab3Btn.classList.toggle("active", i === 2);
 
-  activeList.forEach((key) => {
-    const listItem = document.createElement("li");
-    listItem.innerText = key.key + (key.command ? ` | ${key.command}` : "");
-    listUl.appendChild(listItem);
+  const label1 = ["Keybind", "Keybind", "Macro"];
+  const label2 = ["Family", "Command", "Commands"];
+
+  sortSelect.children[4].value = label2[i].toLowerCase() + "-asc";
+  sortSelect.children[5].value = label2[i].toLowerCase() + "-desc";
+  sortSelect.children[4].innerText = label2[i] + " (asc)";
+  sortSelect.children[5].innerText = label2[i] + " (desc)";
+
+  listHeaders[0].innerText = label1[i];
+  listHeaders[0].setAttribute("data-header", label1[i].toLowerCase());
+
+  listHeaders[1].innerText = label2[i];
+  listHeaders[1].setAttribute("data-header", label2[i].toLowerCase());
+
+  const lists = [state.availKeysFiltered, state.usedKeysFiltered, state.macros];
+
+  if (i !== 2) {
+    footerWrap.style.display = "flex";
+    macroButtonsWrap.style.display = "none";
+  } else {
+    footerWrap.style.display = "none";
+    macroButtonsWrap.style.display = "flex";
+  }
+  lists[i].forEach((item) => {
+    if (i !== 2) {
+      renderItem(item);
+    } else {
+      renderMacro(item);
+    }
   });
 }
-window.onload = (event) => {
+
+function renderItem(item) {
+  const listItem = document.createElement("div");
+  listItem.className = "list-item";
+
+  const listItemLeft = document.createElement("div");
+  listItemLeft.classList.add("list-item-left");
+
+  const listItemRight = document.createElement("div");
+  listItemRight.classList.add("list-item-right");
+
+  listItemLeft.innerText = state.activeTab !== 2 ? item.key : item.name;
+  listItemRight.innerText = state.activeTab === 0 ? item.family : item.command;
+
+  listItem.appendChild(listItemLeft);
+  listItem.appendChild(listItemRight);
+  listBody.appendChild(listItem);
+}
+
+function renderMacro(item) {
+  const macroItem = document.createElement("div");
+  macroItem.className = "macro-item";
+  macroItem.setAttribute("data-id", item.id);
+  macroItem.addEventListener("click", (e) => {
+    macroItem.classList.toggle("selected");
+    state.macros.find((macro) => macro.id === item.id).selected = !item.selected;
+  });
+
+  const macroItemToggle = document.createElement("div");
+  macroItemToggle.className = "macro-item-toggle";
+  macroItemToggle.innerText = item.name;
+
+  macroItem.appendChild(macroItemToggle);
+
+  item.commands.forEach((command) => {
+    const commandItem = document.createElement("div");
+    commandItem.className = "macro-item-command";
+
+    commandItem.innerText = `${command.category} > ${command.name}`;
+    macroItem.appendChild(commandItem);
+  });
+
+  listBody.appendChild(macroItem);
+}
+
+window.onload = () => {
   if (localStorage.getItem("storedState")) {
     const storedState = JSON.parse(localStorage.getItem("storedState"));
     storedState.searchQuery = "";
@@ -260,9 +410,36 @@ searchInput.addEventListener("input", (e) => {
 });
 
 tab1Btn.addEventListener("click", () => {
-  setState({ activeTab: 1 });
+  sortSelect.value = "amount-asc";
+  setState({ activeTab: 0, activeSort: "amount-asc" });
 });
 
 tab2Btn.addEventListener("click", () => {
-  setState({ activeTab: 2 });
+  sortSelect.value = "amount-asc";
+  setState({ activeTab: 1, activeSort: "amount-asc" });
 });
+
+tab3Btn.addEventListener("click", () => {
+  setState({ activeTab: 2, activeSort: "amount-asc" });
+});
+
+sortSelect.addEventListener("change", (e) => {
+  setState({ activeSort: e.target.value });
+});
+
+selectAllMacrosBtn.addEventListener("click", () => {
+  const macroElements = document.querySelectorAll("div.macro-item");
+  if (Array.from(macroElements).every((element) => element.classList.contains("selected"))) {
+    macroElements.forEach((element, i) => {
+      element.classList.remove("selected");
+      state.macros[i].selected = false;
+    });
+  } else {
+    macroElements.forEach((element, i) => {
+      element.classList.add("selected");
+      state.macros[i].selected = true;
+    });
+  }
+});
+
+exportMacrosBtn.addEventListener("click", downloadXML);

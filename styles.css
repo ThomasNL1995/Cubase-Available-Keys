@@ -47,26 +47,76 @@ body,
 .tab-button.active {
   background: #d1d1d1;
 }
+#sort-wrap {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 10px 0;
+}
 #list-container {
-  margin-top: 10px;
   border: 1px #888 solid;
   align-items: flex-start;
   width: 100%;
+}
+
+#list-header-wrap {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 5px;
+}
+#list-header-wrap .list-header {
+  width: 50%;
+  text-align: center;
+  border-bottom: solid 1px #333;
+  padding: 2px 0;
+}
+#list-header-wrap > div:first-child {
+  border-right: solid 1px #333;
+}
+
+#list-body {
   max-height: 700px;
   height: 500px;
   overflow-y: scroll;
 }
-#list-container ul {
-  padding: 0 10px;
-  margin-left: 0;
-}
-#list-container li {
-  list-style-type: none;
-}
 
+#list-body .list-item {
+  display: flex;
+  flex-direction: row;
+  border-bottom: solid 1px #a0a0a0;
+}
+#list-body .list-item-left,
+#list-body .list-item-right {
+  width: calc(50%);
+  padding: 5px;
+}
+#list-body .list-item-left {
+  width: calc(50% + 19px);
+}
+#list-body .macro-item {
+  border-bottom: solid 1px #a0a0a0;
+}
+#list-body .macro-item.selected {
+  background-color: #d4d4d4;
+}
+#list-body .macro-item > * {
+  padding: 5px;
+}
+#list-body .macro-item-toggle {
+  font-weight: 500;
+}
+#list-body .macro-item-command {
+  padding-left: 30px;
+}
 #footer {
   justify-content: space-between;
   width: 100%;
   font-style: italic;
+  padding: 10px 0;
+}
+#macro-buttons {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
   padding: 10px 0;
 }

@@ -30,14 +30,30 @@
       <div id="tab-control">
         <div id="tab1" class="tab-button active">Available Commands</div>
         <div id="tab2" class="tab-button">Used Commands</div>
+        <div id="tab3" class="tab-button">Macros</div>
+      </div>
+      <div id="sort-wrap">
+        <select name="sorting" id="sort-select">
+          <option value="amount-asc">Amount of modifiers (asc)</option>
+          <option value="amount-desc">Amount of modifiers (desc)</option>
+          <option value="key-asc">Keybind (asc)</option>
+          <option value="key-desc">Keybind (desc)</option>
+          <option value="family-asc">Family (asc)</option>
+          <option value="family-desc">Family (desc)</option>
+        </select>
       </div>
       <div id="list-container">
-        <ul id="list-ul"></ul>
+        <div id="list-header-wrap">
+          <div class="list-header active-asc" data-header="keybind">Keybind</div>
+          <div class="list-header" data-header="family">Family</div>
+        </div>
+        <div id="list-body"></div>
       </div>
       <div id="footer">
         <div><span id="available-count-span">0</span> available key combinations</div>
         <div><span id="used-count-span">0</span> used key combinations</div>
       </div>
+      <div id="macro-buttons"><button id="macro-selectall-btn">Select All Macros</button><button id="export-macros-btn">Export Selected Macros</button></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.js"></script>
     <script src="index.js"></script>
